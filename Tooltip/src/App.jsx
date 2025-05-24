@@ -4,18 +4,6 @@ import "./App.css";
 import TooltipTest from "./Testing/TooltipTest";
 import { ToggleTip } from "./Components/ToggleTip/ToggleTip";
 const App = () => {
-  // const labelRef = useRef(null);
-  // const [isTruncated, setIsTruncated] = useState(false);
-
-  // useEffect(() => {
-  //   // const checkTruncation = () => {
-  //   const el = labelRef.current;
-  //   if (el) {
-  //     const isOverflowing = el.scrollWidth > el.clientWidth;
-  //     setIsTruncated(isOverflowing);
-  //   }
-  //   // };
-  // }, [label]);
   return (
     // <>
     //   <div
@@ -588,17 +576,17 @@ const App = () => {
     <>
       <div className="tooltip-test">
         <ToggleTip
-          tooltipContent="?: Help" // <- hover tooltip handled by Button
-          toggletipContent="Click to view password rules and other information, some more text here to make it longer"
+          tooltip="?: Help" // <- hover tooltip handled by Button
+          toggletip="Click to view password rules and other information, some more text here to make it longer"
           label="?"
           tooltipPosition="center-left"
         ></ToggleTip>
 
         <ToggleTip
           label="??"
-          tooltipContent="??: Help"
-          toggletipContent="Click to view password rules and other information, some more text here to make it longer Click to view password rules and other information, some more text here to make it longer"
-          tooltipPosition="bottom-center"
+          tooltip="??: Help"
+          toggletip="Click to view password rules and other information, some more text here to make it longer Click to view password rules and other information, some more text here to make it longer"
+          tooltipPosition="top-center"
         ></ToggleTip>
 
         {/* <ToggleTip toggletip="Click to view password rules and other information, some more text here to make it longer">
@@ -625,19 +613,14 @@ const App = () => {
           )}
         </ToggleTip> */}
 
-        <Button
-          tooltipContent="Goods"
-          label="???"
-          variant="primary"
-          tooltipPosition="top-center"
-        ></Button>
+        <Button tooltip="Goods" label="???" variant="primary"></Button>
 
         <ToggleTip
-          tooltipContent="This is a hover tooltip"
-          toggletipContent={
+          tooltip="This is a hover tooltip"
+          toggletip={
             "Click to view password rules and other information, some more text here to make it longer"
           }
-          tooltipPosition="center-right"
+          tooltipPosition="bottom-center"
           withTip={true}
           variant="primary"
         >

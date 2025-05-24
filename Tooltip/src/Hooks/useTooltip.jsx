@@ -230,11 +230,9 @@ function hasOverlap(elementRect, excludeElements = []) {
  * @param {boolean} [config.avoidOverlapping=false] - Avoid overlapping other elements
  * @returns {Object} { tooltipProps, renderTooltip }
  */
-
-export function useTooltip({
-  content,
-  tooltipContent,
-  toggletipContent,
+export const useTooltip = ({
+  content, // Always shown on hover
+  // toggletipContent,
   tooltipPosition,
   withTip = true,
   disabled = false,
@@ -242,52 +240,49 @@ export function useTooltip({
   gap = 8,
   avoidOverlapping = false,
   triggerType = "hover",
-  showOnHover = true,
-  showOnFocus = true,
-  showOnClick = false,
-}) {
+}) => {
   const triggerRef = useRef(null);
   const tooltipRef = useRef(null);
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [showToggletip, setShowToggletip] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [show, setShow] = useState(false);
   const [style, setStyle] = useState({ opacity: 0 });
   const [position, setPosition] = useState("BOTTOM_CENTER");
-  const [mounted, setMounted] = useState(false);
+  const [isToggleTipActive, setIsToggleTipActive] = useState(false);
 
-  // Handle mounting for portal
+  // const currentContent = isToggleTipActive ? toggletipContent : content;
+
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Determine which content to show
-  const currentContent = showToggletip
-    ? toggletipContent || content
-    : tooltipContent || content;
+    console.log("Tooltip content: ", typeof content);
+  }, [content]);
 
   // Handle show/hide with delay and cleanup
   useEffect(() => {
     let timeout;
 
-    if (showTooltip || showToggletip) {
+    if (visible) {
       timeout = setTimeout(
         () => {
+          setShow(true);
           if (globalAnimationEnabled) globalAnimationEnabled = false;
           resetAnimationSession();
         },
         globalAnimationEnabled ? delay : 0
       );
     } else {
+      setShow(false);
+      if (!visible) {
+        setIsToggleTipActive(false);
+      }
       resetAnimationSession();
     }
 
     const handleScroll = () => {
-      setShowTooltip(false);
+      setVisible(false);
     };
 
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && (showTooltip || showToggletip)) {
-        setShowTooltip(false);
-        setShowToggletip(false);
+      if (e.key === "Escape" && visible) {
+        setVisible(false);
       }
     };
 
@@ -299,224 +294,233 @@ export function useTooltip({
       window.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showTooltip, showToggletip, delay]);
+  }, [visible, delay]);
 
-  // Calculate position
+  // Calculate and set tooltip position whenever shown
   useLayoutEffect(() => {
-    const shouldShow = showTooltip || showToggletip;
-    if (shouldShow && triggerRef.current && tooltipRef.current) {
-      const trigger = triggerRef.current;
-      const tooltip = tooltipRef.current;
-      if (!trigger || !tooltip) return;
+    if (!show || disabled) return;
 
-      const triggerRect = trigger.getBoundingClientRect();
-      if (!triggerRect || triggerRect.width === 0 || triggerRect.height === 0)
-        return;
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
 
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
+    const triggerRect = trigger.getBoundingClientRect();
+    if (!triggerRect || triggerRect.width === 0 || triggerRect.height === 0)
+      return;
 
-      // Temporarily show tooltip to measure its dimensions
-      const originalStyles = {
-        display: tooltip.style.display,
-        visibility: tooltip.style.visibility,
-        position: tooltip.style.position,
-      };
-      tooltip.style.display = "block";
-      tooltip.style.visibility = "hidden";
-      tooltip.style.position = "fixed";
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
 
-      const tooltipRect = {
-        width: tooltip.offsetWidth,
-        height: tooltip.offsetHeight,
-      };
+    // Temporarily show tooltip to measure its dimensions
+    const originalStyles = {
+      display: tooltip.style.display,
+      visibility: tooltip.style.visibility,
+      position: tooltip.style.position,
+    };
+    tooltip.style.display = "block";
+    tooltip.style.visibility = "hidden";
+    tooltip.style.position = "fixed";
 
-      // Restore original styles
-      Object.assign(tooltip.style, originalStyles);
-      if (tooltipRect.width <= 0 || tooltipRect.height <= 0) return;
+    const tooltipRect = {
+      width: tooltip.offsetWidth,
+      height: tooltip.offsetHeight,
+    };
 
-      /**
-       * Tests if a position is valid (in viewport and optionally not overlapping)
-       * @param {string} pos - Position to test
-       * @returns {Object} { coords, pos, isValid }
-       */
-      const tryPosition = (pos) => {
-        const coords = getPositionCoords(pos, triggerRect, tooltipRect, gap);
-        if (!coords) return { isValid: false };
+    // Restore original styles
+    Object.assign(tooltip.style, originalStyles);
+    if (tooltipRect.width <= 0 || tooltipRect.height <= 0) return;
 
-        const inViewport = isPositionInViewport(
-          coords,
-          tooltipRect,
-          viewportWidth,
-          viewportHeight
-        );
-        const notOverlapping = avoidOverlapping
-          ? isPositionNotOverlapping(
-              coords,
-              pos,
-              tooltipRect,
-              triggerRect,
-              trigger,
-              tooltip
-            )
-          : true;
+    /**
+     * Tests if a position is valid (in viewport and optionally not overlapping)
+     * @param {string} pos - Position to test
+     * @returns {Object} { coords, pos, isValid }
+     */
+    const tryPosition = (pos) => {
+      const coords = getPositionCoords(pos, triggerRect, tooltipRect, gap);
+      if (!coords) return { isValid: false };
 
-        return { coords, pos, isValid: inViewport && notOverlapping };
-      };
-
-      // Position selection strategy:
-      // 1. First try user-specified position
-      if (tooltipPosition) {
-        const { coords, pos, isValid } = tryPosition(tooltipPosition);
-        if (isValid) {
-          setStyle({ ...coords, opacity: 1 });
-          setPosition(pos);
-          return;
-        }
-
-        // 2. Then try mirror position
-        const mirrorPos = POSITION_MIRROR[tooltipPosition];
-        if (mirrorPos) {
-          const {
-            coords: mirrorCoords,
-            pos: mirrorPosFinal,
-            isValid: mirrorValid,
-          } = tryPosition(mirrorPos);
-          if (mirrorValid) {
-            setStyle({ ...mirrorCoords, opacity: 1 });
-            setPosition(mirrorPosFinal);
-            return;
-          }
-        }
-      }
-
-      // 3. Try all positions in priority order
-      for (const pos of POSITION_PRIORITY) {
-        const { coords, pos: validPos, isValid } = tryPosition(pos);
-        if (isValid) {
-          setStyle({ ...coords, opacity: 1 });
-          setPosition(validPos);
-          return;
-        }
-      }
-
-      // 4. Fallback: Find first position that fits in viewport (when avoid overlapping fails)
-      const positionsToTry = tooltipPosition
-        ? [tooltipPosition, ...POSITION_PRIORITY]
-        : POSITION_PRIORITY;
-
-      for (const pos of positionsToTry) {
-        const coords = getPositionCoords(pos, triggerRect, tooltipRect, gap);
-        if (
-          coords &&
-          isPositionInViewport(
-            coords,
-            tooltipRect,
-            viewportWidth,
-            viewportHeight
-          )
-        ) {
-          setStyle({ ...coords, opacity: 1 });
-          setPosition(pos);
-          return;
-        }
-      }
-
-      // 5. Ultimate fallback: Clamp first position to viewport edges
-      const fallbackPos = positionsToTry[0];
-      const fallbackCoords = getPositionCoords(
-        fallbackPos,
-        triggerRect,
+      const inViewport = isPositionInViewport(
+        coords,
         tooltipRect,
-        gap
-      ) || { top: 0, left: 0 };
-      setStyle({
-        ...fallbackCoords,
-        top: Math.max(
-          0,
-          Math.min(fallbackCoords.top, viewportHeight - tooltipRect.height)
-        ),
-        left: Math.max(
-          0,
-          Math.min(fallbackCoords.left, viewportWidth - tooltipRect.width)
-        ),
-        opacity: 1,
-      });
-      setPosition(fallbackPos);
+        viewportWidth,
+        viewportHeight
+      );
+      const notOverlapping = avoidOverlapping
+        ? isPositionNotOverlapping(
+            coords,
+            pos,
+            tooltipRect,
+            triggerRect,
+            trigger,
+            tooltip
+          )
+        : true;
+
+      return { coords, pos, isValid: inViewport && notOverlapping };
+    };
+
+    // Position selection strategy:
+    // 1. First try user-specified position
+    if (tooltipPosition) {
+      const { coords, pos, isValid } = tryPosition(tooltipPosition);
+      if (isValid) {
+        setStyle({ ...coords, opacity: 1 });
+        setPosition(pos);
+        return;
+      }
+
+      // 2. Then try mirror position
+      const mirrorPos = POSITION_MIRROR[tooltipPosition];
+      if (mirrorPos) {
+        const {
+          coords: mirrorCoords,
+          pos: mirrorPosFinal,
+          isValid: mirrorValid,
+        } = tryPosition(mirrorPos);
+        if (mirrorValid) {
+          setStyle({ ...mirrorCoords, opacity: 1 });
+          setPosition(mirrorPosFinal);
+          return;
+        }
+      }
     }
-  }, [
-    showTooltip,
-    showToggletip,
-    disabled,
-    gap,
-    avoidOverlapping,
-    tooltipPosition,
-  ]);
 
-  // Handle outside clicks for toggletip
-  useEffect(() => {
-    if (!showToggletip) return;
+    // 3. Try all positions in priority order
+    for (const pos of POSITION_PRIORITY) {
+      const { coords, pos: validPos, isValid } = tryPosition(pos);
+      if (isValid) {
+        setStyle({ ...coords, opacity: 1 });
+        setPosition(validPos);
+        return;
+      }
+    }
 
-    const handleOutsideClick = (event) => {
+    // 4. Fallback: Find first position that fits in viewport (when avioid overlapping fails)
+    const positionsToTry = tooltipPosition
+      ? [tooltipPosition, ...POSITION_PRIORITY]
+      : POSITION_PRIORITY;
+
+    for (const pos of positionsToTry) {
+      const coords = getPositionCoords(pos, triggerRect, tooltipRect, gap);
       if (
-        triggerRef.current &&
-        tooltipRef.current &&
-        !triggerRef.current.contains(event.target) &&
-        !tooltipRef.current.contains(event.target)
+        coords &&
+        isPositionInViewport(coords, tooltipRect, viewportWidth, viewportHeight)
       ) {
-        setShowToggletip(false);
+        setStyle({ ...coords, opacity: 1 });
+        setPosition(pos);
+        return;
+      }
+    }
+
+    // 5. Ultimate fallback: Clamp first position to viewport edges
+    const fallbackPos = positionsToTry[0];
+    const fallbackCoords = getPositionCoords(
+      fallbackPos,
+      triggerRect,
+      tooltipRect,
+      gap
+    ) || { top: 0, left: 0 };
+    setStyle({
+      ...fallbackCoords,
+      top: Math.max(
+        0,
+        Math.min(fallbackCoords.top, viewportHeight - tooltipRect.height)
+      ),
+      left: Math.max(
+        0,
+        Math.min(fallbackCoords.left, viewportWidth - tooltipRect.width)
+      ),
+      opacity: 1,
+    });
+    setPosition(fallbackPos);
+  }, [show, disabled, gap, avoidOverlapping, tooltipPosition]);
+
+  // Handle click outside to close tooltip when triggerType is "click"
+  useEffect(() => {
+    if (triggerType !== "click" || !isToggleTipActive) return;
+
+    const handleClickOutside = (e) => {
+      if (
+        !e.target.closest(".tooltip") &&
+        !e.target.closest("[data-toggle-tip='true']")
+      ) {
+        setVisible(false);
       }
     };
 
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [showToggletip]);
-
-  // Event handlers
-  const handleMouseEnter = () => {
-    if (disabled || showToggletip) return;
-    if (showOnHover) {
-      setShowTooltip(true);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (showToggletip) return;
-    if (showOnHover) {
-      setShowTooltip(false);
-    }
-  };
-
-  const handleFocus = () => {
-    if (disabled || showToggletip) return;
-    if (showOnFocus) {
-      setShowTooltip(true);
-    }
-  };
-
-  const handleBlur = () => {
-    if (showToggletip) return;
-    if (showOnFocus) {
-      setShowTooltip(false);
-    }
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isToggleTipActive, triggerType]);
 
   const handleClick = () => {
     if (disabled) return;
-    if (showOnClick || triggerType === "click") {
-      setShowToggletip(!showToggletip);
-      setShowTooltip(false);
+
+    if (triggerType === "click") {
+      console.log("Click event triggered inside toggletip");
+
+      setIsToggleTipActive(true);
+      setVisible(true);
     }
   };
 
-  // Tooltip element
-  const tooltipElement =
-    mounted && (showTooltip || showToggletip) && currentContent
+  const handleMouseEnter = () => {
+    if (disabled || isToggleTipActive) return;
+    setVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (isToggleTipActive) return;
+    setVisible(false);
+  };
+
+  const getTooltipProps = () => {
+    const baseProps = {
+      ref: triggerRef,
+      "aria-label": content,
+      onMouseEnter: handleMouseEnter,
+      onMouseLeave: handleMouseLeave,
+      onFocus: handleMouseEnter,
+      onBlur: handleMouseLeave,
+    };
+
+    if (triggerType === "click") {
+      return {
+        ...baseProps,
+        "data-toggle-tip": isToggleTipActive,
+        "aria-description": content,
+        onClick: handleClick,
+        onKeyDown: (e) => {
+          if (e.key === "Escape" && visible) {
+            setVisible(false);
+            setIsToggleTipActive(false);
+          }
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        },
+      };
+    }
+
+    return {
+      ...baseProps,
+      onClick: () => {
+        console.log("Click event triggered inside tooltip");
+        setVisible(false);
+      },
+      onKeyDown: (e) => e.key === "Escape" && setVisible(false),
+    };
+  };
+
+  const renderTooltip = () => {
+    const portalRoot = document.fullscreenElement || document.body;
+
+    return show && content
       ? createPortal(
           <div
             ref={tooltipRef}
-            role={showToggletip ? "dialog" : "tooltip"}
-            aria-hidden={!(showTooltip || showToggletip)}
+            role="tooltip"
+            aria-hidden={!visible}
             className="tooltip"
             style={{
               position: "fixed",
@@ -527,7 +531,7 @@ export function useTooltip({
               padding: "8px 12px",
               borderRadius: "0.25rem",
               fontSize: "0.875rem",
-              textAlign: currentContent?.trim().length <= 4 ? "center" : "left",
+              textAlign: content?.trim().length <= 4 ? "center" : "left",
               minWidth: "2rem",
               maxWidth: "28.375rem",
               boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
@@ -536,7 +540,7 @@ export function useTooltip({
                 ? "opacity 0.2s ease, transform 0.2s ease"
                 : "opacity 0.1s ease",
               ...style,
-              opacity: showTooltip || showToggletip ? 1 : 0,
+              opacity: visible ? 1 : 0,
             }}
           >
             <div
@@ -550,7 +554,7 @@ export function useTooltip({
                 whiteSpace: "normal",
               }}
             >
-              {currentContent}
+              {content}
             </div>
 
             {withTip && (
@@ -611,44 +615,17 @@ export function useTooltip({
               />
             )}
           </div>,
-          document.body
+          portalRoot // Changed from document.body to portalRoot
         )
       : null;
-
-  // Props to spread on trigger element
-  const triggerProps = {
-    ref: triggerRef,
-    "aria-label": content,
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    onFocus: handleFocus,
-    onBlur: handleBlur,
-    ...((showOnClick || triggerType === "click") && {
-      onClick: handleClick,
-      "data-toggle-tip": showToggletip,
-      "aria-description": content,
-      onKeyDown: (e) => {
-        if (e.key === "Escape" && (showTooltip || showToggletip)) {
-          setShowTooltip(false);
-          setShowToggletip(false);
-        }
-        if (
-          (e.key === "Enter" || e.key === " ") &&
-          (showOnClick || triggerType === "click")
-        ) {
-          e.preventDefault();
-          handleClick();
-        }
-      },
-    }),
   };
-
   return {
-    triggerProps,
-    tooltipElement,
-    isTooltipVisible: showTooltip,
-    isToggletipVisible: showToggletip,
-    setShowToggletip,
+    tooltipProps: getTooltipProps(),
+    visible,
+    setVisible,
+    renderTooltip,
+    isToggleTipActive,
+    triggerRef,
+    tooltipRef,
   };
-}
-
+};

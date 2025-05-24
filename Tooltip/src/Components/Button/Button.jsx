@@ -3,53 +3,40 @@
 import "./Button.css";
 import { useTooltip } from "../../Hooks/useTooltip";
 
-export default function Button(
-  {
-    label,
-    children,
-    tooltipContent,
-    onClick,
-    className = "",
-    variant = "primary",
-    disabled = false,
+export default function Button({
+  className = "",
+  variant = "primary",
+  tooltip, // hover tooltip content
+  tooltipPosition = "BOTTOM_CENTER",
+  withTip = false,
+  gap = 8,
+  avoidOverlapping = false,
+  disabled = false,
+  label,
+  children,
+  ...toggletipProps
+}) {
+  const { tooltipProps, renderTooltip } = useTooltip({
+    content: tooltip, // Hover tooltip only
     tooltipPosition,
-    ...props
-  },
-  ref
-) {
-  console.log("props", props);
-
-  const { triggerProps, tooltipElement } = useTooltip({
-    content: tooltipContent,
-    showOnHover: !!tooltipContent,
-    showOnFocus: !!tooltipContent,
-    showOnClick: false,
-    tooltipPosition,
+    withTip,
+    disabled,
+    gap,
+    avoidOverlapping,
+    triggerType: "hover",
   });
-
-  const handleClick = (e) => {
-    if (onClick) onClick(e);
-    if (triggerProps.onClick) triggerProps.onClick(e);
-  };
 
   return (
     <>
       <button
-        {...props}
-        {...triggerProps}
-        ref={(node) => {
-          triggerProps.ref.current = node;
-          if (ref) {
-            if (typeof ref === "function") ref(node);
-            else ref.current = node;
-          }
-        }}
+        {...tooltipProps}
+        {...toggletipProps}
         className={`btn ${variant} ${disabled ? "disabled" : ""} ${className}`}
-        onClick={handleClick}
+        disabled={disabled}
       >
         {label || children}
       </button>
-      {tooltipElement}
+      {renderTooltip()}
     </>
   );
 }
