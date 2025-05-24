@@ -1,7 +1,7 @@
 "use client";
 
 import "./Button.css";
-import { useTooltip } from "../../hooks/useTooltip";
+import { useTooltip } from "../../Hooks/useTooltip";
 
 export default function Button(
   {

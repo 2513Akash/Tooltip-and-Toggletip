@@ -1,6 +1,6 @@
 "use client";
 
-import { useTooltip } from "../../hooks/useTooltip";
+import { useTooltip } from "../../Hooks/useTooltip";
 import "../Button/Button.css";
 export const ToggleTip = ({
   children,
