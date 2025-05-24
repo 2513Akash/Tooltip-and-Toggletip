@@ -1,0 +1,72 @@
+/* Button.css */
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    border: 0.7px solid transparent;
+  }
+
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn:active{
+    border: 0.7px solid #d0d9eb;
+  }
+  
+  /* Variants */
+  .btn.primary {
+    background-color: #2563eb;
+    color: white;
+  }
+  .btn.primary:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .btn.secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+  .btn.secondary:hover {
+    background-color: #4b5563;
+  }
+  
+  .btn.outline {
+    border: 2px solid #2563eb;
+    color: #2563eb;
+    background-color: white;
+  }
+  .btn.outline:hover {
+    background-color: #eff6ff;
+  }
+  
+  .btn.danger {
+    background-color: #dc2626;
+    color: white;
+  }
+  .btn.danger:hover {
+    background-color: #b91c1c;
+  }
+  
+  .btn.ghost {
+    background-color: transparent;
+    color: #374151;
+    border: 1px solid white;
+    color: white;
+  }
+
+  .btn.ghost:hover {
+    background-color: #f3f4f6;
+    color: black;
+  }
+  
+  /* Disabled state */
+  .btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  

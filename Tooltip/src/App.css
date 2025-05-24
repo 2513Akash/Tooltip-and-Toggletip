@@ -1,0 +1,28 @@
+body{
+  color: white;
+  background-color: #121212; /* Dark background */
+}
+.app-container {
+  height: 92vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: 40px; /* Space from bottom */
+  border: none;
+}
+
+.button-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  /* flex-direction: column; */
+}
+
+.tooltip-test{
+  height: 92vh;
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
